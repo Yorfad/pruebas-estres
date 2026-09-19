@@ -17,9 +17,9 @@ const http = require('http');
 const https = require('https');
 
 const ESCENARIOS = {
-  carga: { usuarios: 500, rampup: 60, duracion: 300 },
-  estres: { usuarios: 2000, rampup: 60, duracion: 300 },
-  estabilidad: { usuarios: 200, rampup: 30, duracion: 600 },
+  carga: { usuarios: 500, rampup: 10, duracion: 60 },
+  estres: { usuarios: 2000, rampup: 10, duracion: 60 },
+  estabilidad: { usuarios: 200, rampup: 5, duracion: 60 },
 };
 
 function parseArgs() {
@@ -41,7 +41,7 @@ function construirConfig() {
   const preset = ESCENARIOS[opts.escenario] || {};
 
   const config = {
-    url: opts.url || 'https://pruebas-estres.onrender.com',
+    url: opts.url || 'https://pruebas-estres-production.up.railway.app',
     path: opts.path || '/hash',
     vueltas: parseInt(opts.vueltas) || 200000,
     usuarios: parseInt(opts.usuarios) || preset.usuarios || 50,

@@ -41,6 +41,16 @@ curl "http://localhost:3000/procesar-json?cantidad=500000"
 
 > Nota: en el plan gratuito de Render, el servicio "duerme" tras 15 minutos de inactividad y la primera peticion tarda mas en responder (cold start). Ten esto en cuenta al interpretar las metricas de la primera corrida.
 
+## Despliegue actual: Railway (plan pago)
+
+Este proyecto esta desplegado en Railway en un plan pago con **4 CPU / 4GB RAM**, en:
+
+```
+https://pruebas-estres-production.up.railway.app
+```
+
+Se eligio Railway en lugar de Render porque el plan gratuito de Render no muestra metricas de CPU/memoria durante las pruebas de carga (esa vista requiere plan pago), y para esta practica es indispensable observar el consumo real de recursos durante el estres. En Railway, las metricas de CPU/memoria/red se ven en la pestaña **Metrics** del servicio, en tiempo real.
+
 ## Desplegar gratis en Vercel (alternativa)
 
 Vercel usa funciones serverless. Para usar este mismo codigo:
@@ -66,31 +76,31 @@ Vercel usa funciones serverless. Para usar este mismo codigo:
   - Summary Report
   - Graph Results
 
-### Escenarios
+### Escenarios (ajustados a 1 minuto por prueba, servicio en Railway con 4 CPU / 4GB RAM)
 
-- **Carga:** 50 -> 500 usuarios concurrentes.
-- **Estres:** subir hasta 2000 usuarios (muy por encima del limite esperado).
-- **Estabilidad:** mantener 200 usuarios constantes durante 10 minutos.
+- **Carga:** hasta 500 usuarios concurrentes, ramp-up 10s, duracion 1 minuto.
+- **Estres:** hasta 2000 usuarios (muy por encima del limite esperado), ramp-up 10s, duracion 1 minuto.
+- **Estabilidad:** 200 usuarios constantes durante 1 minuto.
 
 Registra tiempo de respuesta promedio/maximo, throughput, % de errores y, si el hosting lo permite, uso de CPU/memoria, para identificar el punto de quiebre del servicio.
 
 ## Planes de JMeter listos (`jmeter/`)
 
-Ya incluidos, uno por escenario:
+Ya incluidos, uno por escenario, apuntando a `pruebas-estres-production.up.railway.app` y con duracion de 1 minuto cada uno:
 
-- `jmeter/carga.jmx` — 500 usuarios, ramp-up 60s, duracion 300s.
-- `jmeter/estres.jmx` — 2000 usuarios, ramp-up 60s, duracion 300s (por encima del limite esperado, para forzar el quiebre).
-- `jmeter/estabilidad.jmx` — 200 usuarios, ramp-up 30s, duracion 600s (10 min).
+- `jmeter/carga.jmx` — 500 usuarios, ramp-up 10s, duracion 60s.
+- `jmeter/estres.jmx` — 2000 usuarios, ramp-up 10s, duracion 60s (por encima del limite esperado, para forzar el quiebre).
+- `jmeter/estabilidad.jmx` — 200 usuarios, ramp-up 5s, duracion 60s.
 
-Cada uno apunta por defecto a `http://localhost:3000/hash?vueltas=200000` y ya trae Response Assertion (verifica que la respuesta contenga `"operacion"`) mas los listeners **Summary Report** y **Graph Results**.
+Cada uno ya trae Response Assertion (verifica que la respuesta contenga `"operacion"`) mas los listeners **Summary Report** y **Graph Results**.
 
 ### Como usarlos
 
 1. Abre el archivo en JMeter (`jmeter.bat` en Windows -> File > Open).
-2. En el arbol, entra a **Test Plan > Variables Definidas por el Usuario** y cambia:
-   - `HOST` -> tu dominio de Render (ej. `tu-app.onrender.com`), sin `http://`.
-   - `PORT` -> `443` si usas Render (HTTPS) o `3000` si pruebas en local.
-   - `PROTOCOLO` -> `https` para Render, `http` para local.
+2. Si quieres cambiar el objetivo, entra a **Test Plan > Variables Definidas por el Usuario**:
+   - `HOST` -> `pruebas-estres-production.up.railway.app` (ya configurado).
+   - `PORT` -> `443` (HTTPS) o `3000` si pruebas en local.
+   - `PROTOCOLO` -> `https` en Railway, `http` en local.
    - `RUTA` -> el endpoint a probar (`/hash`, `/factorial` o `/procesar-json`).
    - `VUELTAS` -> intensidad de la carga que le pides a la API por peticion.
 3. Corre el plan (boton verde de Play). Revisa **Summary Report** para las metricas y **Graph Results** para la grafica.
@@ -107,18 +117,18 @@ jmeter -n -t jmeter/carga.jmx -l resultados-carga.jtl -e -o reporte-carga
 
 Si no quieres instalar JMeter, este proyecto incluye un generador de carga en Node.js puro (sin dependencias) que simula usuarios concurrentes y da un reporte similar al Summary Report de JMeter: total de peticiones, % de error, throughput, latencia promedio/min/max y percentiles 90/95/99.
 
-Correr los 3 escenarios ya definidos (apuntando a `https://pruebas-estres.onrender.com` por defecto):
+Correr los 3 escenarios ya definidos (apuntando a `https://pruebas-estres-production.up.railway.app` por defecto, 1 minuto cada uno):
 
 ```bash
-npm run carga        # 500 usuarios, ramp-up 60s, duracion 300s
-npm run estres        # 2000 usuarios, ramp-up 60s, duracion 300s
-npm run estabilidad   # 200 usuarios, ramp-up 30s, duracion 600s
+npm run carga        # 500 usuarios, ramp-up 10s, duracion 60s
+npm run estres        # 2000 usuarios, ramp-up 10s, duracion 60s
+npm run estabilidad   # 200 usuarios, ramp-up 5s, duracion 60s
 ```
 
 O a la medida:
 
 ```bash
-node scripts/load-test.js --url https://pruebas-estres.onrender.com --path /hash --vueltas 200000 --usuarios 300 --rampup 30 --duracion 120
+node scripts/load-test.js --url https://pruebas-estres-production.up.railway.app --path /hash --vueltas 200000 --usuarios 300 --rampup 10 --duracion 60
 ```
 
 Parametros disponibles: `--url`, `--path` (`/hash`, `/factorial` o `/procesar-json`), `--vueltas` (intensidad de la operacion), `--usuarios`, `--rampup` (segundos), `--duracion` (segundos), `--timeout` (ms, default 20000).
