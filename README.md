@@ -102,3 +102,27 @@ Para correrlos sin abrir la interfaz grafica (modo linea de comandos, mas realis
 ```bash
 jmeter -n -t jmeter/carga.jmx -l resultados-carga.jtl -e -o reporte-carga
 ```
+
+## Alternativa sin instalar nada: `scripts/load-test.js`
+
+Si no quieres instalar JMeter, este proyecto incluye un generador de carga en Node.js puro (sin dependencias) que simula usuarios concurrentes y da un reporte similar al Summary Report de JMeter: total de peticiones, % de error, throughput, latencia promedio/min/max y percentiles 90/95/99.
+
+Correr los 3 escenarios ya definidos (apuntando a `https://pruebas-estres.onrender.com` por defecto):
+
+```bash
+npm run carga        # 500 usuarios, ramp-up 60s, duracion 300s
+npm run estres        # 2000 usuarios, ramp-up 60s, duracion 300s
+npm run estabilidad   # 200 usuarios, ramp-up 30s, duracion 600s
+```
+
+O a la medida:
+
+```bash
+node scripts/load-test.js --url https://pruebas-estres.onrender.com --path /hash --vueltas 200000 --usuarios 300 --rampup 30 --duracion 120
+```
+
+Parametros disponibles: `--url`, `--path` (`/hash`, `/factorial` o `/procesar-json`), `--vueltas` (intensidad de la operacion), `--usuarios`, `--rampup` (segundos), `--duracion` (segundos), `--timeout` (ms, default 20000).
+
+> Nota para Windows con Git Bash: si el path (ej. `/hash`) aparece convertido en una ruta de Windows en el reporte, antepon `MSYS_NO_PATHCONV=1` al comando, o corre el script desde PowerShell en vez de Git Bash.
+
+Igual que con JMeter, este script **no se autolimita**: manda exactamente los usuarios/duracion indicados y solo cuenta como fallo las peticiones con timeout o codigo de error — asi puedes observar el punto real de quiebre de la API.

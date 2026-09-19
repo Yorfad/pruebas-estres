@@ -5,7 +5,10 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "carga": "node scripts/load-test.js --escenario carga --url https://pruebas-estres.onrender.com",
+    "estres": "node scripts/load-test.js --escenario estres --url https://pruebas-estres.onrender.com",
+    "estabilidad": "node scripts/load-test.js --escenario estabilidad --url https://pruebas-estres.onrender.com"
   },
   "engines": {
     "node": ">=18.0.0"
