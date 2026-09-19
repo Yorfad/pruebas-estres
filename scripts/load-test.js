@@ -291,13 +291,17 @@ function describirFallo(filas, umbralQuiebrePct) {
   console.log('===================================================================\n');
 }
 
+// Se usa ";" como separador (no ",") porque Excel en configuracion regional
+// en espanol usa la coma como separador decimal, y espera ";" para separar
+// columnas. Con "," el CSV se ve como una sola columna al abrirlo.
+const BOM_UTF8 = '﻿';
 const ENCABEZADO_CSV =
-  'usuarios,peticiones,exitosas,fallidas,pct_error,throughput_req_s,latencia_prom_ms,latencia_min_ms,latencia_max_ms,p90_ms,p95_ms,p99_ms\n';
+  'usuarios;peticiones;exitosas;fallidas;pct_error;throughput_req_s;latencia_prom_ms;latencia_min_ms;latencia_max_ms;p90_ms;p95_ms;p99_ms\n';
 
 function filaACsv(f) {
-  return `${f.usuarios},${f.total},${f.exitosos},${f.fallidos},${f.pctError.toFixed(2)},${f.throughput.toFixed(
+  return `${f.usuarios};${f.total};${f.exitosos};${f.fallidos};${f.pctError.toFixed(2)};${f.throughput.toFixed(
     2
-  )},${f.promedio.toFixed(0)},${f.min},${f.max},${f.p90},${f.p95},${f.p99}`;
+  )};${f.promedio.toFixed(0)};${f.min};${f.max};${f.p90};${f.p95};${f.p99}`;
 }
 
 function crearArchivoCsv(config) {
@@ -306,7 +310,7 @@ function crearArchivoCsv(config) {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const nombreRuta = config.path.replace(/\//g, '');
   const archivo = path.join(dir, `metricas-${nombreRuta}-${timestamp}.csv`);
-  fs.writeFileSync(archivo, ENCABEZADO_CSV, 'utf8');
+  fs.writeFileSync(archivo, BOM_UTF8 + ENCABEZADO_CSV, 'utf8');
   return archivo;
 }
 
