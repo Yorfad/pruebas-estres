@@ -9,9 +9,9 @@
     "carga": "node scripts/load-test.js --escenario carga --url https://pruebas-estres-production.up.railway.app",
     "estres": "node scripts/load-test.js --escenario estres --url https://pruebas-estres-production.up.railway.app",
     "estabilidad": "node scripts/load-test.js --escenario estabilidad --url https://pruebas-estres-production.up.railway.app",
-    "escaneo:hash": "node scripts/load-test.js --path /hash --steps 50,100,200,300,500,800,1000 --url https://pruebas-estres-production.up.railway.app",
-    "escaneo:factorial": "node scripts/load-test.js --path /factorial --steps 50,100,200,300,500,800,1000 --url https://pruebas-estres-production.up.railway.app",
-    "escaneo:procesar-json": "node scripts/load-test.js --path /procesar-json --steps 50,100,200,300,500,800,1000 --url https://pruebas-estres-production.up.railway.app"
+    "escaneo:hash": "node scripts/load-test.js --path /hash --steps 50,200,500,1000 --url https://pruebas-estres-production.up.railway.app",
+    "escaneo:factorial": "node scripts/load-test.js --path /factorial --steps 50,200,500,1000 --url https://pruebas-estres-production.up.railway.app",
+    "escaneo:procesar-json": "node scripts/load-test.js --path /procesar-json --steps 50,200,500,1000 --url https://pruebas-estres-production.up.railway.app"
   },
   "engines": {
     "node": ">=18.0.0"

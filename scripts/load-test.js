@@ -58,13 +58,13 @@ function construirConfig() {
     usuarios: parseInt(opts.usuarios) || preset.usuarios || 50,
     rampupSeg: parseInt(opts.rampup) || preset.rampup || 10,
     duracionSeg: parseInt(opts.duracion) || preset.duracion || 60,
-    timeoutMs: parseInt(opts.timeout) || 20000,
+    timeoutMs: parseInt(opts.timeout) || 8000,
     steps: opts.steps
       ? opts.steps.split(',').map((n) => parseInt(n.trim())).filter(Boolean)
       : null,
-    stepDuracionSeg: parseInt(opts['step-duracion']) || 20,
-    stepRampupSeg: parseInt(opts['step-rampup']) || 5,
-    pausaEntrePasosSeg: opts.pausa !== undefined ? parseInt(opts.pausa) : 5,
+    stepDuracionSeg: parseInt(opts['step-duracion']) || 10,
+    stepRampupSeg: parseInt(opts['step-rampup']) || 3,
+    pausaEntrePasosSeg: opts.pausa !== undefined ? parseInt(opts.pausa) : 3,
     umbralQuiebrePct: parseFloat(opts.umbral) || 20,
   };
 
@@ -291,24 +291,32 @@ function describirFallo(filas, umbralQuiebrePct) {
   console.log('===================================================================\n');
 }
 
-function guardarCsv(config, filas) {
+const ENCABEZADO_CSV =
+  'usuarios,peticiones,exitosas,fallidas,pct_error,throughput_req_s,latencia_prom_ms,latencia_min_ms,latencia_max_ms,p90_ms,p95_ms,p99_ms\n';
+
+function filaACsv(f) {
+  return `${f.usuarios},${f.total},${f.exitosos},${f.fallidos},${f.pctError.toFixed(2)},${f.throughput.toFixed(
+    2
+  )},${f.promedio.toFixed(0)},${f.min},${f.max},${f.p90},${f.p95},${f.p99}`;
+}
+
+function crearArchivoCsv(config) {
   const dir = path.join(process.cwd(), 'resultados');
   fs.mkdirSync(dir, { recursive: true });
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const nombreRuta = config.path.replace(/\//g, '');
   const archivo = path.join(dir, `metricas-${nombreRuta}-${timestamp}.csv`);
+  fs.writeFileSync(archivo, ENCABEZADO_CSV, 'utf8');
+  return archivo;
+}
 
-  const encabezado = 'usuarios,peticiones,exitosas,fallidas,pct_error,throughput_req_s,latencia_prom_ms,latencia_min_ms,latencia_max_ms,p90_ms,p95_ms,p99_ms\n';
-  const filasTexto = filas
-    .map(
-      (f) =>
-        `${f.usuarios},${f.total},${f.exitosos},${f.fallidos},${f.pctError.toFixed(2)},${f.throughput.toFixed(
-          2
-        )},${f.promedio.toFixed(0)},${f.min},${f.max},${f.p90},${f.p95},${f.p99}`
-    )
-    .join('\n');
+function agregarFilaCsv(archivo, fila) {
+  fs.appendFileSync(archivo, filaACsv(fila) + '\n', 'utf8');
+}
 
-  fs.writeFileSync(archivo, encabezado + filasTexto + '\n', 'utf8');
+function guardarCsv(config, filas) {
+  const archivo = crearArchivoCsv(config);
+  filas.forEach((f) => agregarFilaCsv(archivo, f));
   console.log(`CSV guardado en: ${archivo}`);
   console.log('(Abrelo en Excel/Sheets para hacer la grafica de "tiempo de respuesta vs usuarios" que pide la tarea)\n');
 }
@@ -319,7 +327,25 @@ async function modoEscaneo(config, targetUrl, agente) {
   console.log(`Niveles a probar: ${config.steps.join(', ')}`);
   console.log(`Duracion por nivel: ${config.stepDuracionSeg}s | Ramp-up por nivel: ${config.stepRampupSeg}s\n`);
 
+  const archivoCsv = crearArchivoCsv(config);
+  console.log(`Guardando resultados en vivo en: ${archivoCsv}`);
+  console.log('(si cancelas con Ctrl+C, los niveles ya completados quedan guardados ahi)\n');
+
   const filas = [];
+
+  const manejarInterrupcion = () => {
+    console.log('\n\nInterrumpido por el usuario. Mostrando resultados parciales...');
+    if (filas.length > 0) {
+      imprimirTablaComparativa(filas);
+      describirFallo(filas, config.umbralQuiebrePct);
+    } else {
+      console.log('Ningun nivel llego a completarse todavia.');
+    }
+    console.log(`Los niveles completados ya estan guardados en: ${archivoCsv}\n`);
+    process.exit(0);
+  };
+  process.once('SIGINT', manejarInterrupcion);
+
   for (let i = 0; i < config.steps.length; i++) {
     const usuarios = config.steps[i];
     console.log(`--- Nivel ${i + 1}/${config.steps.length}: ${usuarios} usuarios ---`);
@@ -339,6 +365,7 @@ async function modoEscaneo(config, targetUrl, agente) {
       )} ms, throughput ${resumen.throughput.toFixed(2)} req/s`
     );
     filas.push(resumen);
+    agregarFilaCsv(archivoCsv, resumen);
 
     if (i < config.steps.length - 1 && config.pausaEntrePasosSeg > 0) {
       console.log(`  Esperando ${config.pausaEntrePasosSeg}s antes del siguiente nivel...\n`);
@@ -346,9 +373,10 @@ async function modoEscaneo(config, targetUrl, agente) {
     }
   }
 
+  process.removeListener('SIGINT', manejarInterrupcion);
   imprimirTablaComparativa(filas);
   describirFallo(filas, config.umbralQuiebrePct);
-  guardarCsv(config, filas);
+  console.log(`CSV completo guardado en: ${archivoCsv}\n`);
 }
 
 async function modoSimple(config, targetUrl, agente) {
