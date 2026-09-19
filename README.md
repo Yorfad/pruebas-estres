@@ -136,3 +136,33 @@ Parametros disponibles: `--url`, `--path` (`/hash`, `/factorial` o `/procesar-js
 > Nota para Windows con Git Bash: si el path (ej. `/hash`) aparece convertido en una ruta de Windows en el reporte, antepon `MSYS_NO_PATHCONV=1` al comando, o corre el script desde PowerShell en vez de Git Bash.
 
 Igual que con JMeter, este script **no se autolimita**: manda exactamente los usuarios/duracion indicados y solo cuenta como fallo las peticiones con timeout o codigo de error — asi puedes observar el punto real de quiebre de la API.
+
+### Modo escaneo: encontrar el punto de quiebre automaticamente
+
+En vez de correr un solo nivel de usuarios, `--steps` prueba varios niveles **uno tras otro en una sola ejecucion** y arma directamente los entregables que pide la tarea (tabla de metricas, grafica de tiempo de respuesta vs usuarios, y la descripcion del fallo):
+
+```bash
+npm run escaneo:hash              # prueba /hash con 50,100,200,300,500,800,1000 usuarios
+npm run escaneo:factorial         # lo mismo con /factorial
+npm run escaneo:procesar-json     # lo mismo con /procesar-json
+```
+
+O a la medida:
+
+```bash
+node scripts/load-test.js --path /hash --steps 50,100,200,300,500,800,1000 --step-duracion 20 --step-rampup 5 --pausa 5 --umbral 20
+```
+
+- `--steps` — lista de niveles de usuarios a probar, separados por coma.
+- `--step-duracion` — segundos que dura cada nivel (default 20).
+- `--step-rampup` — segundos de ramp-up dentro de cada nivel (default 5).
+- `--pausa` — segundos de espera entre un nivel y el siguiente, para dejar que el servidor se recupere (default 5).
+- `--umbral` — % de error a partir del cual se considera que el servicio "se quebro" (default 20).
+
+Al terminar, el script imprime:
+1. Una **tabla comparativa** (usuarios, peticiones, % error, throughput, latencia promedio/max/p95) — para pegar directo en el reporte.
+2. Una **grafica ASCII** de latencia promedio vs usuarios (vista rapida en terminal).
+3. Una **descripcion automatica del fallo**, tipo: *"a los 800 usuarios el servicio devolvio 20.5% de error, codigo 502/TIMEOUT"*.
+4. Un **archivo CSV** en `resultados/` con todos los datos, listo para abrir en Excel/Sheets y hacer ahi la grafica final para la presentacion.
+
+> Cuidado con `--path /factorial`: usa `n` en vez de `vueltas`, y con numeros muy grandes (arriba de ~50000) el bucle de BigInt puede tardar mucho por peticion; para el escaneo, `--vueltas` en este caso controla el valor de `n`.
